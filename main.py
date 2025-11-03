@@ -14,7 +14,7 @@ Características principales:
 
 import pygame
 from pygame import mixer
-from fighter import WarriorFighter, SlimeDemonFighter
+from fighters import WarriorFighter, SlimeDemonFighter, AssassinFighter, TankFighter, TrapperFighter
 from character_select import CharacterSelectScreen
 import math
 
@@ -144,17 +144,26 @@ def draw_text_on_screen(text, font, text_color, x_position, y_position):
 
 def draw_game_background():
     """
-    Dibuja el fondo del juego con desplazamiento horizontal simple.
-    El fondo se mueve ligeramente para seguir a los luchadores.
+    Dibuja el fondo del juego con desplazamiento horizontal correcto.
+    Un solo fondo que se mueve suavemente sin mostrar franjas negras.
     """
-    # Escalar imagen de fondo al tamaño de pantalla
-    scaled_background = pygame.transform.scale(background_image, (SCREEN_WIDTH + 400, SCREEN_HEIGHT))
+    # Crear fondo extendido para permitir movimiento sin mostrar bordes
+    extended_width = SCREEN_WIDTH + 800  # Fondo más amplio para el movimiento
+    scaled_background = pygame.transform.scale(background_image, (extended_width, SCREEN_HEIGHT))
     
-    # Aplicar offset de cámara solo horizontalmente
-    bg_x = int(camera_offset_x * 0.5)  # Parallax más suave para el fondo
+    # Aplicar offset de cámara con parallax sutil
+    bg_x = int(camera_offset_x * 0.2) - 300  # Offset inicial para centrar el fondo
     bg_y = 0
     
-    # Dibujar fondo
+    # Asegurar que el fondo siempre cubra toda la pantalla
+    # Si el fondo se sale por la izquierda, ajustarlo
+    if bg_x > 0:
+        bg_x = 0
+    # Si el fondo se sale por la derecha, ajustarlo
+    elif bg_x < -(extended_width - SCREEN_WIDTH):
+        bg_x = -(extended_width - SCREEN_WIDTH)
+    
+    # Dibujar el fondo una sola vez en la posición calculada
     game_screen.blit(scaled_background, (bg_x, bg_y))
 
 def draw_health_bar(current_health, max_health, x_position, y_position):
@@ -216,13 +225,13 @@ def calculate_camera_follow(fighter1, fighter2):
     # Calcular posición ideal de cámara para centrar el punto medio
     ideal_camera_x = (SCREEN_WIDTH // 2) - midpoint_x
     
-    # Aplicar límites para no mostrar áreas fuera del escenario
-    max_offset = 200  # Máximo desplazamiento permitido
-    min_offset = -200
+    # Límites mejorados para evitar mostrar áreas vacías
+    max_offset = 300  # Máximo desplazamiento permitido (aumentado)
+    min_offset = -300
     ideal_camera_x = max(min_offset, min(max_offset, ideal_camera_x))
     
-    # Suavizar movimiento de cámara
-    camera_offset_x += (ideal_camera_x - camera_offset_x) * CAMERA_FOLLOW_SPEED
+    # Suavizar movimiento de cámara con mejor responsividad
+    camera_offset_x += (ideal_camera_x - camera_offset_x) * (CAMERA_FOLLOW_SPEED * 1.5)
 
 def create_fighters_from_selection():
     """
@@ -243,6 +252,12 @@ def create_fighters_from_selection():
         fighter_1 = WarriorFighter(1, initial_x_p1, initial_y, False, sword_sound_effect)
     elif p1_character == 'SlimeDemonFighter':
         fighter_1 = SlimeDemonFighter(1, initial_x_p1, initial_y, False, magic_sound_effect)
+    elif p1_character == 'AssassinFighter':
+        fighter_1 = AssassinFighter(1, initial_x_p1, initial_y, False, sword_sound_effect)
+    elif p1_character == 'TankFighter':
+        fighter_1 = TankFighter(1, initial_x_p1, initial_y, False, sword_sound_effect)
+    elif p1_character == 'TrapperFighter':
+        fighter_1 = TrapperFighter(1, initial_x_p1, initial_y, False, sword_sound_effect)
     else:
         # Por defecto, usar Warrior
         fighter_1 = WarriorFighter(1, initial_x_p1, initial_y, False, sword_sound_effect)
@@ -252,6 +267,12 @@ def create_fighters_from_selection():
         fighter_2 = WarriorFighter(2, initial_x_p2, initial_y, True, sword_sound_effect)
     elif p2_character == 'SlimeDemonFighter':
         fighter_2 = SlimeDemonFighter(2, initial_x_p2, initial_y, True, magic_sound_effect)
+    elif p2_character == 'AssassinFighter':
+        fighter_2 = AssassinFighter(2, initial_x_p2, initial_y, True, sword_sound_effect)
+    elif p2_character == 'TankFighter':
+        fighter_2 = TankFighter(2, initial_x_p2, initial_y, True, sword_sound_effect)
+    elif p2_character == 'TrapperFighter':
+        fighter_2 = TrapperFighter(2, initial_x_p2, initial_y, True, sword_sound_effect)
     else:
         # Por defecto, usar Slime Demon
         fighter_2 = SlimeDemonFighter(2, initial_x_p2, initial_y, True, magic_sound_effect)
