@@ -26,6 +26,36 @@ class WarriorFighter(Fighter):
         
         # Flag para indicar orientación de sprites
         self.sprites_inverted = False
+        # Hacer la hitbox del Warrior más grande (más ancho y un poco más alta)
+        old_bottom = self.collision_rect.bottom
+        self.collision_rect.width = 100   # Aumenta el ancho base (antes 80)
+        self.collision_rect.height = 185  # Un poco más alta que antes
+        self.collision_rect.bottom = old_bottom
+        # Ajustar el tamaño del sprite para que visualmente coincida con la nueva hitbox
+        # Calculamos una escala tal que la altura del sprite ≈ collision_rect.height + 20
+        # (el +20 compensa el offset vertical que se aplica al dibujar)
+        try:
+            # Queremos que el sprite del Warrior tenga aproximadamente la misma altura
+            # que el Assassin y sea un poco más ancho.
+            # Valores del Assassin tal como definidos en su clase: character_size=170, image_scale=4.2
+            assassin_sprite_height = 170 * 4.2
+            desired_scale = assassin_sprite_height / float(self.character_size)
+            # Aplicar una pequeña subida adicional para que sea "un poco más ancho"
+            desired_scale *= 1.02
+            # Clamp razonable
+            min_scale = 0.8
+            max_scale = 6.0
+            if desired_scale < min_scale:
+                desired_scale = min_scale
+            if desired_scale > max_scale:
+                desired_scale = max_scale
+            self.image_scale = desired_scale
+            # Recargar sprites con la nueva escala
+            self.animation_list = self.load_individual_sprites()
+            self.current_image = self.animation_list[self.current_action][self.frame_index]
+            self.last_update_time = pygame.time.get_ticks()
+        except Exception:
+            pass
         
     def load_individual_sprites(self):
         """Carga los sprites individuales del Warrior desde sus directorios."""
@@ -62,15 +92,15 @@ class WarriorFighter(Fighter):
                     file_path = os.path.join(directory_path, file_name)
                     # Cargar y escalar la imagen
                     sprite_image = pygame.image.load(file_path).convert_alpha()
-                    scaled_sprite = pygame.transform.scale(
-                        sprite_image, 
-                        (self.character_size * self.image_scale, self.character_size * self.image_scale)
-                    )
+                    # Hacer el sprite un poco más ancho que alto para que destaque respecto al Assassin
+                    width = int(self.character_size * self.image_scale * 1.05)
+                    height = int(self.character_size * self.image_scale)
+                    scaled_sprite = pygame.transform.scale(sprite_image, (width, height))
                     frame_list.append(scaled_sprite)
             
             # Si no hay frames, agregar un frame dummy
             if not frame_list:
-                dummy_surface = pygame.Surface((self.character_size * self.image_scale, self.character_size * self.image_scale))
+                dummy_surface = pygame.Surface((int(self.character_size * self.image_scale * 1.05), int(self.character_size * self.image_scale)))
                 dummy_surface.fill((255, 0, 255))
                 frame_list.append(dummy_surface)
                 
@@ -169,20 +199,64 @@ class WarriorFighter(Fighter):
         """Obtiene el área de ataque actual del Warrior."""
         if not self.is_attacking:
             return None
-            
-        # Área de ataque del Warrior
-        attack_width = 4 * self.collision_rect.width
+        # Área de ataque del Warrior (ajustada por tipo de ataque)
         attack_y = self.collision_rect.y - 20
         attack_height = 550 - attack_y + 20
-        
-        if self.flip_sprite:
-            attack_x = self.collision_rect.centerx - attack_width
+
+        # Definir anchos relativos para cada ataque (aumentados; especialmente el 2)
+        # Ataque 1: ligeramente más ancho que el cuerpo
+        attack1_width = int(self.collision_rect.width * 1.8)
+        # Ataque 2: mucho más ancho (se extiende a ambos lados, centrado)
+        attack2_width = int(self.collision_rect.width * 3.5)
+        # Ataque 3: más ancho que el ataque 1 pero menor que el 2
+        attack3_width = int(self.collision_rect.width * 2.5)
+
+        if self.current_attack_type == 1:
+            attack_width = attack1_width
+            if self.flip_sprite:
+                attack_x = self.collision_rect.centerx - attack_width
+            else:
+                attack_x = self.collision_rect.centerx
+
+        elif self.current_attack_type == 2:
+            attack_width = attack2_width
+            # Centrar la hitbox en el caballero
+            attack_x = self.collision_rect.centerx - (attack_width // 2)
+
+        elif self.current_attack_type == 3:
+            attack_width = attack3_width
+            if self.flip_sprite:
+                attack_x = self.collision_rect.centerx - attack_width
+            else:
+                attack_x = self.collision_rect.centerx
+
         else:
-            attack_x = self.collision_rect.centerx
-            
+            return None
+
         return pygame.Rect(attack_x, attack_y, attack_width, attack_height)
     
     def get_attack_area_for_display(self, attack_type):
         """Obtiene el área de ataque para visualización."""
-        # Para el Warrior, todos los ataques usan la misma área
-        return self.get_attack_area()
+        # Mostrar áreas por tipo para que el debug refleje el área real
+        attack_y = self.collision_rect.y - 20
+        attack_height = 550 - attack_y + 20
+        attack1_width = int(self.collision_rect.width * 1.8)
+        attack2_width = int(self.collision_rect.width * 3.5)
+        attack3_width = int(self.collision_rect.width * 2.5)
+
+        if attack_type == 1:
+            if self.flip_sprite:
+                attack_x = self.collision_rect.centerx - attack1_width
+            else:
+                attack_x = self.collision_rect.centerx
+            return pygame.Rect(attack_x, attack_y, attack1_width, attack_height)
+        elif attack_type == 2:
+            attack_x = self.collision_rect.centerx - (attack2_width // 2)
+            return pygame.Rect(attack_x, attack_y, attack2_width, attack_height)
+        elif attack_type == 3:
+            if self.flip_sprite:
+                attack_x = self.collision_rect.centerx - attack3_width
+            else:
+                attack_x = self.collision_rect.centerx
+            return pygame.Rect(attack_x, attack_y, attack3_width, attack_height)
+        return None

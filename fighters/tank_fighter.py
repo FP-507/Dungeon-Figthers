@@ -318,9 +318,9 @@ class TankFighter(Fighter):
             
         return pygame.Rect(attack_x, attack_y, attack_width, attack_height)
     
-    def draw(self, surface, camera_offset_x=0):
+    def draw(self, surface, camera_offset_x=0, show_hitboxes=False):
         """Dibujar el Tank con posibles efectos visuales de resistencia."""
         # Dibujar normalmente
-        super().draw(surface, camera_offset_x)
+        super().draw(surface, camera_offset_x, show_hitboxes)
         
         # Efecto berserker eliminado - sin elementos visuales adicionales

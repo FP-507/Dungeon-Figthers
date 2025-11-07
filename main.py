@@ -398,8 +398,8 @@ def render_game():
         elif current_game_state == GAME_STATE_FIGHTING:
             # Dibujar luchadores
             if fighter_player_1 and fighter_player_2:
-                fighter_player_1.draw(game_screen, camera_offset_x)
-                fighter_player_2.draw(game_screen, camera_offset_x)
+                fighter_player_1.draw(game_screen, camera_offset_x, show_hitboxes)
+                fighter_player_2.draw(game_screen, camera_offset_x, show_hitboxes)
                 
                 # Mostrar hitboxes si está activado
                 if show_hitboxes:
@@ -418,8 +418,8 @@ def render_game():
         elif current_game_state == GAME_STATE_ROUND_OVER:
             # Dibujar luchadores en su estado final
             if fighter_player_1 and fighter_player_2:
-                fighter_player_1.draw(game_screen, camera_offset_x)
-                fighter_player_2.draw(game_screen, camera_offset_x)
+                fighter_player_1.draw(game_screen, camera_offset_x, show_hitboxes)
+                fighter_player_2.draw(game_screen, camera_offset_x, show_hitboxes)
             
             # Mostrar imagen de victoria
             victory_rect = victory_image.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))

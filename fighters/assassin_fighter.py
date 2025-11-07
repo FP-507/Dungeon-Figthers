@@ -301,10 +301,10 @@ class AssassinFighter(Fighter):
         if current_time - self.last_attack_time > self.combo_window:
             self.attack_combo_counter = 0
     
-    def draw(self, surface, camera_offset_x=0):
+    def draw(self, surface, camera_offset_x=0, show_hitboxes=False):
         """Dibujar el Assassin con posibles efectos visuales de velocidad."""
         # Dibujar normalmente
-        super().draw(surface, camera_offset_x)
+        super().draw(surface, camera_offset_x, show_hitboxes)
         
         # Opcional: Efecto visual cuando está en combo
         if self.attack_combo_counter > 2:

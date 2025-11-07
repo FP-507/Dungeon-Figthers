@@ -367,7 +367,7 @@ class SlimeDemonFighter(Fighter):
             return self.get_attack_area()
         return None
 
-    def draw(self, surface, camera_offset_x=0):
+    def draw(self, surface, camera_offset_x=0, show_hitboxes=False):
         """Dibuja el Slime Demon y sus proyectiles independientes."""
         # Durante attack2, mostrar idle en lugar de la animación de attack2
         if self.is_attacking and self.current_attack_type == 2:
@@ -406,7 +406,7 @@ class SlimeDemonFighter(Fighter):
                 surface.blit(final_image, (draw_x, draw_y))
         else:
             # Dibujar normalmente para todos los otros ataques
-            super().draw(surface, camera_offset_x)
+            super().draw(surface, camera_offset_x, show_hitboxes)
         
         # Dibujar proyectiles usando sus propios frames de animación
         for proj in self.active_projectiles:
@@ -423,11 +423,12 @@ class SlimeDemonFighter(Fighter):
                 surface.blit(frame, (draw_x, draw_y))
             # Eliminado el fallback de círculo naranja
         
-        # Opcional: dibujar contorno de explosión del ataque 3
-        if self.attack3_explosion_triggered and self.is_attacking and self.current_attack_type == 3:
-            if hasattr(self, 'attack3_explosion_rect') and self.attack3_explosion_rect:
-                r = self.attack3_explosion_rect
-                pygame.draw.rect(surface, (255, 140, 0), pygame.Rect(r.x + camera_offset_x, r.y, r.width, r.height), 3)
+        # Opcional: dibujar contorno de explosión del ataque 3 (solo si se muestran hitboxes)
+        if show_hitboxes:
+            if self.attack3_explosion_triggered and self.is_attacking and self.current_attack_type == 3:
+                if hasattr(self, 'attack3_explosion_rect') and self.attack3_explosion_rect:
+                    r = self.attack3_explosion_rect
+                    pygame.draw.rect(surface, (255, 140, 0), pygame.Rect(r.x + camera_offset_x, r.y, r.width, r.height), 3)
         
     def load_individual_sprites(self):
         """Carga los sprites individuales del Slime Demon desde sus directorios."""

@@ -462,7 +462,7 @@ class Fighter:
             self.frame_index = 0
             self.last_update_time = pygame.time.get_ticks()
 
-    def draw(self, surface, camera_offset_x=0):
+    def draw(self, surface, camera_offset_x=0, show_hitboxes=False):
         """Dibuja el personaje en la superficie especificada."""
         actual_flip = self.flip_sprite
         if hasattr(self, 'sprites_inverted') and self.sprites_inverted:
@@ -477,7 +477,6 @@ class Fighter:
         draw_y = self.collision_rect.bottom - sprite_height + 20
         
         surface.blit(final_image, (draw_x, draw_y))
-        
         # Dibujar proyectiles
         self.draw_projectiles(surface, camera_offset_x)
 

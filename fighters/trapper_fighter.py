@@ -599,10 +599,10 @@ class TrapperFighter(Fighter):
             return pygame.Rect(trap_x, trap_y, 50, 40)
         return None  # Ataque 3 (proyectil) no tiene área fija
     
-    def draw(self, surface, camera_offset_x=0):
+    def draw(self, surface, camera_offset_x=0, show_hitboxes=False):
         """Dibujar el Trapper sin efectos visuales adicionales."""
         # Dibujar normalmente
-        super().draw(surface, camera_offset_x)
+        super().draw(surface, camera_offset_x, show_hitboxes)
         
         # Dibujar trampas activas usando sus sprites individuales - MÁS GRANDES
         for trap in self.active_traps:
