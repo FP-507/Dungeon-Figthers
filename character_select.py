@@ -226,10 +226,10 @@ class CharacterSelectScreen:
         
         # Imagen del personaje - ENORME ocupando casi toda la carta
         if character_data['preview_image']:
-            img_size = int(180 * scale)  # ENORME - 80% más grande que el original
+            img_size = int(300 * scale)  # ENORME - 80% más grande que el original
             scaled_img = pygame.transform.scale(character_data['preview_image'], (img_size, img_size))
             img_x = (card_width - img_size) // 2
-            img_y = 5  # Muy arriba para maximizar espacio
+            img_y = -100  # Muy arriba para maximizar espacio
             card_surface.blit(scaled_img, (img_x, img_y))
         
         # Nombre del personaje con sombra
@@ -346,7 +346,7 @@ class CharacterSelectScreen:
         self.draw_particles(surface)
         
         # Dibujar título con efectos
-        title_text = self.title_font.render("SELECCIÓN DE PERSONAJES", True, self.title_color)
+        title_text = self.title_font.render("SELECCI0N DE PERSONAJES", True, self.title_color)
         title_rect = title_text.get_rect(center=(self.screen_width // 2, 60))
         
         # Sombra del título
@@ -433,7 +433,7 @@ class CharacterSelectScreen:
             controls_p1 = "P1: ESC - Cambiar selección"
             
         if not self.selection_confirmed[1]:
-            controls_p2 = "P2: ←/→ - Navegar | 1 - Confirmar"
+            controls_p2 = "P2: </> - Navegar | 1 - Confirmar"
         else:
             controls_p2 = "P2: ESC - Cambiar selección"
         

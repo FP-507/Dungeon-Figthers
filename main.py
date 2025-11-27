@@ -3,9 +3,6 @@ Juego de lucha 2D mejorado con sistema de selección de personajes,
 zoom dinámico basado en distancia y visualización de hitboxes.
 
 Características principales:
-- Sistema de clases padre-hijo para personajes
-- Carga de sprites frame por frame
-- Tercer ataque para cada personaje
 - Zoom dinámico según distancia entre luchadores
 - Pantalla de selección de personajes
 - Visualización de hitboxes con tecla Z
