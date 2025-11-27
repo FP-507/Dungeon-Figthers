@@ -13,7 +13,9 @@ import pygame
 from pygame import mixer
 from fighters import WarriorFighter, SlimeDemonFighter, AssassinFighter, TankFighter, TrapperFighter
 from character_select import CharacterSelectScreen
+from scenario_select import ScenarioSelectScreen
 import math
+import random
 
 # Inicialización de pygame y mixer para audio
 mixer.init()
@@ -49,9 +51,10 @@ ROUND_OVER_DURATION = 2000  # Duración en milisegundos antes de la nueva ronda
 
 # Estados del juego
 GAME_STATE_CHARACTER_SELECT = 0
-GAME_STATE_COUNTDOWN = 1
-GAME_STATE_FIGHTING = 2
-GAME_STATE_ROUND_OVER = 3
+GAME_STATE_SCENARIO_SELECT = 1
+GAME_STATE_COUNTDOWN = 2
+GAME_STATE_FIGHTING = 3
+GAME_STATE_ROUND_OVER = 4
 
 current_game_state = GAME_STATE_CHARACTER_SELECT
 
@@ -119,6 +122,12 @@ except:
 # Inicializar pantalla de selección de personajes
 character_select_screen = CharacterSelectScreen(SCREEN_WIDTH, SCREEN_HEIGHT)
 
+# Inicializar pantalla de selección de escenarios
+scenario_select_screen = ScenarioSelectScreen(SCREEN_WIDTH, SCREEN_HEIGHT)
+
+# Variable para almacenar el background actual
+current_background_image = None
+
 # Variables para los luchadores (se inicializarán después de la selección)
 fighter_player_1 = None
 fighter_player_2 = None
@@ -142,11 +151,15 @@ def draw_text_on_screen(text, font, text_color, x_position, y_position):
 def draw_game_background():
     """
     Dibuja el fondo del juego con desplazamiento horizontal correcto.
-    Un solo fondo que se mueve suavemente sin mostrar franjas negras.
+    Utiliza el background seleccionado en el escenario o el fondo por defecto.
     """
+    global current_background_image
+    # Seleccionar qué imagen de fondo usar
+    bg_image = current_background_image if current_background_image else background_image
+    
     # Crear fondo extendido para permitir movimiento sin mostrar bordes
     extended_width = SCREEN_WIDTH + 800  # Fondo más amplio para el movimiento
-    scaled_background = pygame.transform.scale(background_image, (extended_width, SCREEN_HEIGHT))
+    scaled_background = pygame.transform.scale(bg_image, (extended_width, SCREEN_HEIGHT))
     
     # Aplicar offset de cámara con parallax sutil
     bg_x = int(camera_offset_x * 0.2) - 300  # Offset inicial para centrar el fondo
@@ -295,8 +308,15 @@ def handle_game_input(event):
         if current_game_state == GAME_STATE_CHARACTER_SELECT:
             # Pantalla de selección de personajes
             if character_select_screen.handle_input(event):
-                # Selección completa, crear luchadores y comenzar cuenta regresiva
+                # Selección completa, ir a selección de escenarios
                 fighter_player_1, fighter_player_2 = create_fighters_from_selection()
+                scenario_select_screen.reset_selection()
+                current_game_state = GAME_STATE_SCENARIO_SELECT
+        
+        elif current_game_state == GAME_STATE_SCENARIO_SELECT:
+            # Pantalla de selección de escenarios
+            if scenario_select_screen.handle_input(event):
+                # Selección de escenario completa, comenzar cuenta regresiva
                 current_game_state = GAME_STATE_COUNTDOWN
                 intro_countdown = 3
                 last_countdown_update = pygame.time.get_ticks()
@@ -312,13 +332,22 @@ def update_game_state():
     Actualiza el estado del juego y maneja transiciones entre estados.
     """
     global current_game_state, intro_countdown, last_countdown_update
-    global is_round_over, round_over_start_time, player_scores
+    global is_round_over, round_over_start_time, player_scores, current_background_image
     
     if current_game_state == GAME_STATE_CHARACTER_SELECT:
         # Actualizar pantalla de selección
         character_select_screen.update()
     
+    elif current_game_state == GAME_STATE_SCENARIO_SELECT:
+        # Actualizar pantalla de selección de escenarios
+        scenario_select_screen.update()
+    
     elif current_game_state == GAME_STATE_COUNTDOWN:
+        # Obtener el background seleccionado cuando empieza la cuenta regresiva
+        if current_background_image is None:
+            selected_bg = scenario_select_screen.get_selected_background()
+            if selected_bg:
+                current_background_image = selected_bg['image']
         # Manejar cuenta regresiva
         if intro_countdown > 0:
             current_time = pygame.time.get_ticks()
@@ -357,8 +386,8 @@ def update_game_state():
         if pygame.time.get_ticks() - round_over_start_time > ROUND_OVER_DURATION:
             # Automáticamente volver a selección de personajes
             character_select_screen.reset_selection()
+            current_background_image = None  # Resetear el background
             current_game_state = GAME_STATE_CHARACTER_SELECT
-            # Nada adicional que resetear
 
 def render_game():
     """
@@ -370,6 +399,10 @@ def render_game():
     if current_game_state == GAME_STATE_CHARACTER_SELECT:
         # Mostrar pantalla de selección de personajes
         character_select_screen.draw(game_screen)
+    
+    elif current_game_state == GAME_STATE_SCENARIO_SELECT:
+        # Mostrar pantalla de selección de escenarios
+        scenario_select_screen.draw(game_screen)
     
     else:
         # Dibujar fondo del juego

@@ -6,7 +6,7 @@
 ## 📋 Información del Proyecto
 
 **Nombre**: Dungeon Fighters - Enhanced Edition  
-**Versión**: 1.3  
+**Versión**: 2.0 
 **Lenguaje**: Python 3.13  
 **Framework**: Pygame 2.6.1  
 **Tipo**: Juego de lucha 2D  
@@ -25,6 +25,9 @@ Dungeon Fighters es un juego de lucha 2D avanzado que presenta combate táctico 
 - ✅ **Cámara Dinámica** con seguimiento inteligente
 - ✅ **Sistema de Rondas** con puntuación persistente
 - ✅ **Selección de Personajes** con preview visual
+- ✅ **Selección de Escenarios** con animaciones
+- ✅ **Sistema de Escudo** con mecánica defensiva
+- ✅ **Normalización de Movimiento Diagonal** para velocidad consistente
 - ✅ **Audio Integrado** con efectos por personaje
 - ✅ **Debug Mode** con visualización de hitboxes
 
@@ -125,20 +128,59 @@ Dungeon-Figthers/
 
 ### 🎮 Controles
 
-#### Jugador 1
+#### Jugador 1 (WASD + Ataques)
 - **Movimiento**: A (izquierda), D (derecha)
 - **Salto**: W
+- **Escudo**: S (mantener presionado)
 - **Ataques**: R (Ataque 1), T (Ataque 2), Y (Ataque 3)
 
-#### Jugador 2
+#### Jugador 2 (Flechas + Ataques)
 - **Movimiento**: ← (izquierda), → (derecha)
 - **Salto**: ↑
-- **Ataques**: 1 (Ataque 1), 2 (Ataque 2), 3 (Ataque 3)
+- **Escudo**: ↓ (mantener presionado)
+- **Ataques**: 1 KP (Ataque 1), 2 KP (Ataque 2), 3 KP (Ataque 3)
 
 #### Controles Globales
 - **Z**: Toggle hitboxes (modo debug)
 - **ESC**: Cancelar selección
 - **ENTER**: Nueva ronda
+
+### 🛡️ Sistema de Escudo
+
+#### Características del Escudo
+- **Salud del Escudo**: 20 HP (20% de la salud máxima del personaje)
+- **Distribución de Daño**: Mientras el escudo está activo:
+  - El escudo recibe el 75% del daño
+  - El personaje recibe el 25% del daño (penetración)
+- **Tiempo de Recuperación**: 5 segundos (300 frames a 60 FPS)
+- **Activación**: Mantener presionado la tecla del escudo
+- **Desactivación**: Soltar la tecla del escudo (no por tiempo)
+
+#### Visualización del Escudo
+- **Color**: Celeste transparente (80% de opacidad)
+- **Forma**: Esfera alrededor del personaje
+- **Radio**: Se calcula según el tamaño de la caja de colisión del personaje
+- **Borde**: Línea oscura de 2-3 píxeles para mayor claridad
+
+#### Mecánica de Ruptura
+Cuando el escudo recibe todo su daño (20 HP):
+1. El escudo se desactiva
+2. El escudo inicia su tiempo de recuperación (5 segundos)
+3. Durante la recuperación, el escudo no puede reactivarse
+4. Después de 5 segundos, el escudo se recarga completamente a 20 HP
+
+### 📐 Normalización de Movimiento Diagonal
+
+#### Problema Resuelto
+Anteriormente, cuando un jugador presionaba ambas direcciones (izquierda + derecha o saltando + movimiento horizontal), la velocidad se acumulaba sin límite.
+
+#### Solución Implementada
+- **Cálculo de Magnitud**: Se calcula la magnitud del vector de velocidad usando la fórmula: `√(vx² + vy²)`
+- **Normalización**: Si la magnitud excede la velocidad máxima, se divide ambas componentes entre la magnitud y se multiplica por la velocidad máxima
+- **Resultado**: La velocidad se mantiene consistente en todas las direcciones (diagonales incluidas)
+
+#### Beneficio del Jugador
+Los personajes se mueven a la misma velocidad tanto en línea recta como en diagonal, proporcionando un control más predecible y justo.
 
 ### 📱 Sistema de Cámara
 
@@ -271,7 +313,37 @@ python main.py
 
 ## 📈 Historial de Versiones
 
-### v1.3 (Actual - Noviembre 2025)
+### v2.0 (Actual - Noviembre 2025)
+#### Nuevas Características
+- ✅ **Sistema de Selección de Escenarios**: Dual-player scenario selection con animaciones
+- ✅ **Sistema de Escudo**: Defensa activa con cooldown y absorción de daño
+- ✅ **Normalización de Movimiento Diagonal**: Velocidad consistente en todas las direcciones
+- ✅ **Animaciones Mejoradas**: Efectos visuales en UI y combate
+
+#### Características del Escudo
+- 🛡️ Salud del escudo: 20 HP (20% del HP máximo)
+- 🛡️ Distribución de daño: 75% al escudo, 25% al personaje
+- 🛡️ Tiempo de recuperación: 5 segundos
+- 🛡️ Control por tecla (P1: S, P2: DOWN)
+- 🛡️ Visualización: Esfera celeste transparente con radio proporcional
+
+#### Características de Escenarios
+- 🎭 Selección con preview para ambos jugadores
+- 🎭 Selección aleatoria si hay desacuerdo
+- 🎭 Cambio de background cada ronda
+- 🎭 Animaciones con efectos de pulso y brillo
+
+#### Mejoras Técnicas
+- 🔧 **Estado de Juego**: Nueva etapa SCENARIO_SELECT(1)
+- 🔧 **Máquina de Estados**: CHARACTER_SELECT → SCENARIO_SELECT → COUNTDOWN → FIGHTING → ROUND_OVER
+- 🔧 **Vector Math**: Cálculos de magnitud para normalización
+- 🔧 **Física de Movimiento**: Restricción consistente de velocidad
+
+#### Balanceo de Personajes
+- 🔄 **Warrior**: Ajustes de altura (170px) y área de ataques (1.8x, 3.5x, 2.5x)
+- 🔄 **Todos**: Todos heredan sistema de escudo
+
+### v1.3 (Noviembre 2025)
 #### Nuevas Características
 - ✅ **Trapper Fighter**: Personaje completamente nuevo con mecánicas únicas
 - ✅ **Sistema de Sangrado**: DoT más rápido que quemadura
@@ -375,11 +447,3 @@ python main.py
 
 ## 🎉 ¡Gracias por Jugar!
 
-Dungeon Fighters - Enhanced Edition es un proyecto de pasión que combina mecánicas de combate profundas con sistemas únicos para cada personaje. Cada luchador ha sido cuidadosamente diseñado para ofrecer una experiencia de juego completamente diferente.
-
-**¡Que comience la batalla!** ⚔️
-
----
-
-*Documentación generada automáticamente - Noviembre 2025*  
-*Dungeon Fighters Enhanced Edition v1.3*

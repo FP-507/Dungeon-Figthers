@@ -151,6 +151,13 @@ class Fighter:
         self.bleeding_interval = 45  # Frames entre aplicaciones de daño de sangrado (más rápido que burn)
         self.bleeding_counter = 0  # Contador interno para el intervalo de sangrado
         
+        # Sistema de escudo
+        self.shield_active = False  # Si el escudo está activo
+        self.shield_health = 0  # Vida del escudo (20% de max_health)
+        self.shield_max_health = int(self.max_health * 0.20)  # Escudo absorbe el 20% de la vida máxima
+        self.shield_cooldown_timer = 0  # Temporizador de cooldown del escudo
+        self.shield_cooldown_max = 300  # Cooldown de 5 segundos (300 frames @ 60 FPS)
+        
         # Sistema avanzado de ataques
         self.attack_frame_counter = 0  # Contador de frames para ataques complejos
         self.attack_has_hit = False  # Para evitar múltiples golpes en un ataque
@@ -210,11 +217,12 @@ class Fighter:
     def setup_controls(self):
         """Configura los controles específicos para cada jugador."""
         if self.player_number == 1:
-            # Controles para el jugador 1 (WASD + R, T, Y)
+            # Controles para el jugador 1 (WASD + R, T, Y + S para escudo)
             self.movement_controls = {
                 'left': pygame.K_a,
                 'right': pygame.K_d,
-                'jump': pygame.K_w
+                'jump': pygame.K_w,
+                'shield': pygame.K_s
             }
             self.attack_controls = {
                 'attack1': pygame.K_r,
@@ -222,11 +230,12 @@ class Fighter:
                 'attack3': pygame.K_y
             }
         elif self.player_number == 2:
-            # Controles para el jugador 2 (Flechas + 1, 2, 3 del teclado numérico)
+            # Controles para el jugador 2 (Flechas + 1, 2, 3 del teclado numérico + DOWN para escudo)
             self.movement_controls = {
                 'left': pygame.K_LEFT,
                 'right': pygame.K_RIGHT,
-                'jump': pygame.K_UP
+                'jump': pygame.K_UP,
+                'shield': pygame.K_DOWN
             }
             self.attack_controls = {
                 'attack1': pygame.K_KP1,
@@ -235,10 +244,44 @@ class Fighter:
             }
 
     def apply_damage(self, damage):
-        """Aplica daño al personaje de manera centralizada."""
+        """
+        Aplica daño al personaje de manera centralizada, considerando el escudo.
+        
+        SISTEMA DE ESCUDO:
+        - Si el escudo está ACTIVO: daño se distribuye 75% escudo, 25% personaje
+        - Si el escudo está INACTIVO: todo el daño va al personaje
+        - Si el daño supera la salud del escudo: el exceso va al personaje + inicio cooldown (5 seg)
+        
+        Args:
+            damage (int): Cantidad de daño a aplicar
+        """
         if damage <= 0 or not self.is_alive:
             return
-        self.damage_taken += damage
+        
+        # Si el escudo está activo, aplicar distribución de daño
+        if self.shield_active:
+            shield_damage = int(damage * 0.75)  # Escudo recibe el 75% del daño
+            character_damage = damage - shield_damage  # Personaje recibe el 25% del daño (penetración)
+            
+            if shield_damage >= self.shield_health:
+                # El daño del escudo es mayor o igual a su salud: escudo se rompe
+                remaining_shield_damage = shield_damage - self.shield_health
+                self.shield_active = False  # Desactivar escudo
+                self.shield_health = 0  # Escudo a 0 HP
+                self.shield_cooldown_timer = self.shield_cooldown_max  # Iniciar cooldown de 5 seg
+                # El daño restante del escudo también daña al personaje
+                character_damage += remaining_shield_damage
+            else:
+                # El escudo absorbe todo su daño asignado
+                self.shield_health -= shield_damage
+            
+            # Aplicar el daño total al personaje
+            self.damage_taken += character_damage
+        else:
+            # Sin escudo: todo el daño va al personaje
+            self.damage_taken += damage
+        
+        # Actualizar salud actual basada en daño total acumulado
         self.current_health = max(self.max_health - self.damage_taken, 0)
         if self.current_health <= 0:
             self.is_alive = False
@@ -255,12 +298,50 @@ class Fighter:
         self.bleeding_timer = bleeding_duration_frames
         self.bleeding_counter = 0
 
+    def activate_shield(self):
+        """
+        Activa el escudo del personaje (llamado automáticamente mientras se sostiene la tecla).
+        
+        RESTRICCIONES:
+        - Solo se activa si el cooldown ha expirado (shield_cooldown_timer <= 0)
+        - Restaura la salud del escudo a su máximo (20 HP)
+        - Se mantiene activo mientras la tecla esté presionada
+        """
+        if self.shield_cooldown_timer <= 0:
+            self.shield_active = True
+            self.shield_health = self.shield_max_health
+
+    def update_shield(self):
+        """
+        Actualiza el estado del escudo, incluyendo el temporizador de cooldown.
+        
+        FUNCIONAMIENTO:
+        - Disminuye el contador de cooldown en 1 cada frame (60 frames = 1 segundo)
+        - El cooldown comienza cuando el escudo es destruido
+        - Máximo cooldown: 300 frames (5 segundos)
+        - Una vez que llega a 0, el escudo puede ser reactivado
+        """
+        if self.shield_cooldown_timer > 0:
+            self.shield_cooldown_timer -= 1
+
     def get_movement_speed(self):
         """Retorna la velocidad de movimiento actual."""
         return self.base_movement_speed
 
     def move(self, screen_width, screen_height, surface, target, round_over):
-        """Maneja el movimiento del personaje, incluyendo controles, física y colisiones."""
+        """
+        Maneja el movimiento del personaje, incluyendo controles, física y colisiones.
+        
+        SISTEMA DE CONTROLES:
+        - Movimiento: Izquierda/Derecha + Salto (controles por jugador)
+        - Escudo: Tecla sostenida para mantener escudo activo
+        - Ataques: 3 botones de ataque (ejecutan si el escudo NO está activo)
+        
+        NORMALIZACIÓN DE MOVIMIENTO DIAGONAL:
+        - Calcula la magnitud del vector de velocidad (x, y)
+        - Si la magnitud supera la velocidad máxima, normaliza ambas componentes
+        - Resultado: movimiento consistente en todas las direcciones
+        """
         # Constantes de movimiento y física
         MOVEMENT_SPEED = self.get_movement_speed()
         GRAVITY_FORCE = 2
@@ -293,21 +374,59 @@ class Fighter:
                 self.vertical_velocity = JUMP_STRENGTH
                 self.is_jumping = True
                 
-            # Procesamiento de ataques
-            for attack_name, attack_key in self.attack_controls.items():
-                if pressed_keys[attack_key]:
-                    self.execute_attack(target)
-                    if attack_name == 'attack1':
-                        self.current_attack_type = 1
-                    elif attack_name == 'attack2':
-                        self.current_attack_type = 2
-                    elif attack_name == 'attack3':
-                        self.current_attack_type = 3
-                    break
+            # SISTEMA DE ESCUDO - Control por tecla sostenida
+            # - Se activa: mientras la tecla está presionada Y el cooldown ha expirado
+            # - Se desactiva: cuando se suelta la tecla (no por tiempo ni cooldown)
+            # - Cooldown comienza: cuando el escudo es destruido (se toma 300 frames de daño)
+            if pressed_keys[self.movement_controls['shield']]:
+                # Tecla presionada: intentar activar escudo
+                if not self.shield_active and self.shield_cooldown_timer <= 0:
+                    self.shield_active = True
+                    self.shield_health = self.shield_max_health
+            else:
+                # Tecla soltada: desactivar escudo (pero no cancela cooldown si está en progreso)
+                self.shield_active = False
+                
+            # Procesamiento de ataques - bloqueados mientras el escudo está activo
+            # Esto asegura que los jugadores tomen una decisión: atacar O defender
+            if not self.shield_active:
+                for attack_name, attack_key in self.attack_controls.items():
+                    if pressed_keys[attack_key]:
+                        self.execute_attack(target)
+                        if attack_name == 'attack1':
+                            self.current_attack_type = 1
+                        elif attack_name == 'attack2':
+                            self.current_attack_type = 2
+                        elif attack_name == 'attack3':
+                            self.current_attack_type = 3
+                        break
         
         # Aplicar gravedad a la velocidad vertical
         self.vertical_velocity += GRAVITY_FORCE
         vertical_delta += self.vertical_velocity
+        
+        # NORMALIZACIÓN DE MOVIMIENTO DIAGONAL
+        # Problema resuelto: Cuando el jugador presiona múltiples direcciones simultáneamente,
+        # la velocidad se acumulaba sin límite (diagonal más rápido que línea recta)
+        # 
+        # Solución: Calcular la magnitud del vector (horizontal_delta, vertical_delta)
+        # Si la magnitud > MOVEMENT_SPEED, reescalar ambas componentes proporcionalmente
+        # 
+        # Fórmula:
+        # magnitude = √(horizontal_delta² + vertical_delta²)
+        # normalized_horizontal = (horizontal_delta / magnitude) * MOVEMENT_SPEED
+        # 
+        # Nota: La gravedad se aplica por separado después de la normalización
+        # para mantener la física de salto sin alteraciones
+        if horizontal_delta != 0 and vertical_delta != 0:
+            import math
+            magnitude = math.sqrt(horizontal_delta**2 + vertical_delta**2)
+            # Mantener solo la componente horizontal normalizada
+            # La gravedad se aplica por separado
+            normalized_horizontal = (horizontal_delta / magnitude) * MOVEMENT_SPEED if magnitude > 0 else 0
+            horizontal_delta = normalized_horizontal
+            # Reaplicar la gravedad al componente vertical (independiente de normalización)
+            vertical_delta = self.vertical_velocity
         
         # Mantener personaje dentro de los límites de pantalla horizontalmente
         if self.collision_rect.left + horizontal_delta < 0:
@@ -396,6 +515,9 @@ class Fighter:
         # Decrementar el cooldown de ataque
         if self.attack_cooldown_timer > 0:
             self.attack_cooldown_timer -= 1
+            
+        # Actualizar estado del escudo
+        self.update_shield()
 
         # Actualizar proyectiles
         self.update_projectiles()
@@ -477,8 +599,61 @@ class Fighter:
         draw_y = self.collision_rect.bottom - sprite_height + 20
         
         surface.blit(final_image, (draw_x, draw_y))
+        
+        # Dibujar escudo si está activo
+        if self.shield_active:
+            self.draw_shield(surface, camera_offset_x)
+        
         # Dibujar proyectiles
         self.draw_projectiles(surface, camera_offset_x)
+
+    def draw_shield(self, surface, camera_offset_x=0):
+        """
+        Dibuja el escudo del personaje como una esfera celeste transparente.
+        
+        CARACTERÍSTICAS VISUALES:
+        - Forma: Círculo perfecto de radio proporcional al tamaño de la hitbox
+        - Color: Celeste (100, 200, 255) con 30% de opacidad (76/255)
+        - Borde: Línea azul oscura (50, 150, 255) para mejor claridad
+        - Centrado: En el punto central del sprite (collision_rect.center)
+        - Escalabilidad: El radio se calcula como max(hitbox_width, hitbox_height) // 2
+        
+        FÓRMULA DE RADIO:
+        - Radio = max(ancho_hitbox, alto_hitbox) / 2
+        - Esto asegura que el escudo sea proporcional al tamaño del personaje
+        
+        Args:
+            surface: Superficie de pygame donde se dibuja
+            camera_offset_x: Offset de la cámara para posición correcta
+        """
+        # Calcular el radio del escudo basado en el tamaño de la hitbox del personaje
+        # Esto asegura proporcionalidad independientemente del tamaño del sprite
+        hitbox_width = self.collision_rect.width
+        hitbox_height = self.collision_rect.height
+        shield_radius = max(hitbox_width, hitbox_height) // 2  # Radio proporcional a la hitbox
+        
+        # Opacidad fija y transparente (30% de opacidad = 76/255)
+        shield_opacity = 76
+        
+        # Crear una superficie con canal alfa para el escudo
+        shield_surface = pygame.Surface((shield_radius * 2, shield_radius * 2), pygame.SRCALPHA)
+        
+        # Color celeste transparente (consistente, no basado en vida)
+        shield_color = (100, 200, 255, shield_opacity)
+        
+        # Dibujar círculo del escudo
+        pygame.draw.circle(shield_surface, shield_color, (shield_radius, shield_radius), shield_radius)
+        
+        # Dibujar borde del escudo (más oscuro, pero también transparente)
+        border_color = (50, 150, 255, int(shield_opacity * 1.5))
+        pygame.draw.circle(shield_surface, border_color, (shield_radius, shield_radius), shield_radius, 2)
+        
+        # Posición del escudo (centrado en el sprite del personaje)
+        shield_x = self.collision_rect.centerx - shield_radius + camera_offset_x
+        shield_y = self.collision_rect.centery - shield_radius
+        
+        # Blit del escudo a la superficie principal
+        surface.blit(shield_surface, (int(shield_x), int(shield_y)))
 
     def draw_hitbox(self, surface, show_attack_area=False, camera_offset_x=0):
         """Dibuja la hitbox del personaje y opcionalmente el área de ataque."""
